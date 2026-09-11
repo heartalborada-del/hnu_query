@@ -28,6 +28,7 @@ pub mod pt;
 pub mod wxpay;
 pub mod xgxt;
 pub mod yjsxt;
+pub mod iportal;
 
 mod error;
 pub use error::{Error, ParseError, UnexpectedError};

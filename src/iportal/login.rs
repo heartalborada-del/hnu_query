@@ -1,0 +1,106 @@
+use crate::{
+    cas::{self, login::CasToken},
+    error::{CheckStatusCodeErr, MapNetworkErr, MapParseErr, MapUnexpectedErr},
+    utils::{client, request::cookie_parser},
+};
+use reqwest::{
+    StatusCode, header::{COOKIE, HeaderMap, LOCATION, SET_COOKIE}, redirect,
+};
+
+const IPORTAL_URL: &str = "https://cas.hnu.edu.cn/cas/login?service=https%3A%2F%2Fiportal.hnu.edu.cn%2Fhnu%2Ffrontend%2Flogin%3Fredirect%3Dhttps%253A%252F%252Fiportal.hnu.edu.cn%252Fhome&isotherLogin=true";
+
+/// 个人门户令牌
+#[derive(Debug, Clone)]
+pub struct IPortalToken {
+    headers: HeaderMap,
+}
+
+impl IPortalToken {
+    /// 通过统一身份认证系统登录来获得
+    ///
+    /// # Arguments
+    ///
+    /// - `cas_token`: 统一身份认证系统的令牌，可以通过 [CasToken::acquire_by_login] 创建
+    ///
+    /// # Returns
+    ///
+    /// 返回一个 [IPortalToken] 实例
+    ///
+    /// # Errors
+    ///
+    /// 可能由于 [CasToken] 过期导致返回 [cas::error::TokenExpired] 错误
+    #[cfg_attr(
+        feature = "tracing",
+        tracing::instrument(skip(cas_token), fields(subsystem = "pt"), err)
+    )]
+    pub async fn acquire_by_cas_login(
+        cas_token: &CasToken,
+    ) -> Result<Self, crate::Error<cas::error::TokenExpired>> {
+        let ticket_url = cas_token.get_ticket_url(IPORTAL_URL).await?;
+        let res = client
+            .get(&ticket_url)
+            .send()
+            .await
+            .network_err()?
+            .status_code_err()
+            .await?;
+        let status = res.status();
+        if status != StatusCode::FOUND {
+            #[cfg(feature = "tracing")]
+            {
+                use crate::utils::obs;
+                let body = res.text().await.unwrap_or_default();
+                obs::error!(status = %status, body = %body, "unexpected_status");
+            }
+            return Err(format!("登录个人门户失败，HTTP 状态码: {}", status)).unexpected_err();
+        }
+        let mut cookies = cookie_parser(res.headers().get_all(SET_COOKIE));
+        cookies.extend(cookie_parser(
+            res.headers().get_all(SET_COOKIE)
+        ));
+        // CAS may return the ticket response before the iPortal server creates
+        // its own session cookie. Follow that redirect manually because the
+        // shared client intentionally disables automatic redirects.
+        if let Some(location) = res.headers().get(LOCATION) {
+            let location = location.to_str().parse_err("iPortal redirect location")?;
+            let redirect_response = client
+                .get(location)
+                .send()
+                .await
+                .network_err()?
+                .status_code_err()
+                .await?;
+            cookies.extend(cookie_parser(
+                redirect_response.headers().get_all(SET_COOKIE),
+            ));
+        }
+
+        let cookies = cookies.join("; ");
+        if cookies.is_empty() {
+            return Err("登录个人门户失败：响应中没有 Cookie".to_string()).unexpected_err();
+        }
+        let mut headers = HeaderMap::new();
+        headers.insert(COOKIE, cookies.parse().parse_err(&cookies)?);
+        Ok(Self { headers })
+    }
+    /// 从 [HeaderMap] 创建 [IPortalToken]
+    ///
+    /// # Arguments
+    ///
+    /// - `headers`: 一个合法的可用作 [IPortalToken] 的 [HeaderMap]
+    ///
+    /// # Preconditions
+    ///
+    /// `headers` 参数应该是一个合法的可用作 [IPortalToken] 的 [HeaderMap]，否则会导致未定义行为
+    pub fn from_headers_unchecked(headers: HeaderMap) -> Self {
+        Self { headers }
+    }
+    /// 获取当前令牌的 [HeaderMap]，可用于 [IPortalToken::from_headers_unchecked]
+    ///
+    /// # Returns
+    ///
+    /// 返回当前令牌的 [HeaderMap]
+    pub fn headers(&self) -> &HeaderMap {
+        &self.headers
+    }
+}
