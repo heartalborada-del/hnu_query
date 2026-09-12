@@ -1,9 +1,7 @@
-use chrono::TimeZone;
-use chrono::{DateTime, FixedOffset, NaiveDateTime, Utc};
+use chrono::{DateTime, Utc};
 use hnu_query_macros::traced;
-use serde::de::Deserializer;
 use serde::{Deserialize, Serialize};
-
+use crate::iportal::util::deserialize_timestamp;
 use crate::iportal::login::IPortalToken;
 use crate::utils::obs::{fetch_time, parse_time};
 
@@ -27,21 +25,6 @@ pub struct AccountInfo {
     pub is_app_manager: bool,
     pub is_process_manager: bool,
     //user_config: Option<serde_json::Value>,
-}
-
-fn deserialize_timestamp<'de, D>(deserializer: D) -> Result<DateTime<Utc>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let s = String::deserialize(deserializer)?;
-    let dt =
-        NaiveDateTime::parse_from_str(&s, "%Y-%m-%d %H:%M:%S").map_err(serde::de::Error::custom)?;
-    let timezone = FixedOffset::east_opt(8 * 3600).unwrap();
-    let dt = timezone
-        .from_local_datetime(&dt)
-        .single()
-        .ok_or_else(|| serde::de::Error::custom("invalid datetime"))?;
-    Ok(dt.to_utc())
 }
 
 mod fetch;

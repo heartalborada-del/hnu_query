@@ -3,6 +3,7 @@ pub mod info;
 pub mod login;
 pub mod personal;
 pub mod term;
+pub mod task;
 
 mod util;
 

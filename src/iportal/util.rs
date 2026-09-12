@@ -3,8 +3,10 @@ use crate::{
     error::{CheckStatusCodeErr, MapNetworkErr, MapUnexpectedErr, parse_err},
     iportal::login::IPortalToken,
 };
+use chrono::{DateTime, FixedOffset, NaiveDateTime, TimeZone, Utc};
 use reqwest::{Response, header::COOKIE};
 use reqwest_middleware::RequestBuilder;
+use serde::{Deserialize, Deserializer};
 
 pub(crate) trait IPortalRequestBuilderExt {
     async fn send_with_token(
@@ -53,4 +55,20 @@ pub fn iportal_jsondata_precheck(
         .get("d")
         .ok_or(parse_err("JSON解析错误", json_str))?;
     Ok(data.clone())
+}
+
+
+pub fn deserialize_timestamp<'de, D>(deserializer: D) -> Result<DateTime<Utc>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let s = String::deserialize(deserializer)?;
+    let dt =
+        NaiveDateTime::parse_from_str(&s, "%Y-%m-%d %H:%M:%S").map_err(serde::de::Error::custom)?;
+    let timezone = FixedOffset::east_opt(8 * 3600).unwrap();
+    let dt = timezone
+        .from_local_datetime(&dt)
+        .single()
+        .ok_or_else(|| serde::de::Error::custom("invalid datetime"))?;
+    Ok(dt.to_utc())
 }
