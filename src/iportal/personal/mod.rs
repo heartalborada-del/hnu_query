@@ -1,3 +1,5 @@
+//! iPortal 首页个人数据查询。
+
 use hnu_query_macros::traced;
 use serde::{Deserialize, Deserializer};
 
@@ -9,22 +11,29 @@ use crate::{
 mod fetch;
 mod parse;
 
+/// iPortal 首页可查询的个人数据类型及其详情 ID。
 #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
 #[serde(tag = "key", content = "id")]
 pub enum PersonalDataTypeEnum {
+    /// 图书馆借阅数量。
     #[serde(rename = "book.bookNum")]
     LibBorrow(String),
+    /// 未读邮件数量。
     #[serde(rename = "mail.unread")]
     MailUnread(String),
+    /// 校园卡余额。
     #[serde(rename = "card.balance")]
     Balance(String),
+    /// 上次登录时间。
     #[serde(rename = "statistic.lastLoginTime")]
     LastLoginTime(String),
+    /// 校园网已用流量。
     #[serde(rename = "net.used")]
     NetUsed(String),
 }
 
 impl PersonalDataTypeEnum {
+    /// 消耗当前枚举并返回查询详情所需的 ID。
     pub fn into_value(self) -> String {
         match self {
             Self::LibBorrow(value)
@@ -36,13 +45,18 @@ impl PersonalDataTypeEnum {
     }
 }
 
+/// 一项个人数据的详情。
 #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
 pub struct PersonalDataItem {
+    /// 数据值。
     #[serde(deserialize_with = "deserialize_string_or_float")]
     pub value: String,
+    /// 数据单位；服务端未提供单位时为 `None`。
     pub unit: Option<String>,
+    /// 数据项名称。
     #[serde(alias = "title")]
     pub name: String,
+    /// 与该数据项相关的邮箱；不适用或服务端未提供时为 `None`。
     pub email: Option<String>,
 }
 
@@ -63,10 +77,19 @@ where
     }
 }
 
-/// 获取个人信息列表
+/// 获取当前账号可查询的个人数据类型及其详情 ID。
+///
+/// # Arguments
+///
+/// - `token`: 个人门户令牌，可以通过 [`IPortalToken::acquire_by_cas_login`] 获取
+///
 /// # Returns
-/// 返回个人信息列表，包括图书馆借阅信息、未读邮件数、校园卡余额、上次登录时间和校园网流量使用情况所对应的ID。
-/// 这些ID可以用于获取对应的个人信息详情。
+///
+/// 返回个人数据类型列表。列表中的值可以传给 [`get_personal_data`] 获取详情。
+///
+/// # Errors
+///
+/// 当令牌失效、网络请求失败或响应无法解析时返回错误。
 #[traced(subsystem = "iportal", skip(token))]
 pub async fn get_personal_data_lists(
     token: &IPortalToken,
@@ -76,12 +99,20 @@ pub async fn get_personal_data_lists(
     Ok(items)
 }
 
-/// 获取个人信息详情
+/// 获取一项个人数据的详情。
+///
 /// # Arguments
-/// * `token` - IPortalToken
-/// * `type_enum` - PersonalDataTypeEnum
+///
+/// - `token`: 个人门户令牌，可以通过 [`IPortalToken::acquire_by_cas_login`] 获取
+/// - `type_enum`: 从 [`get_personal_data_lists`] 获得的数据类型及详情 ID
+///
 /// # Returns
-/// 返回个人信息详情，包括图书馆借阅信息、未读邮件数、校园卡余额、上次登录时间和校园网流量使用情况。
+///
+/// 返回对应的 [`PersonalDataItem`]。
+///
+/// # Errors
+///
+/// 当令牌失效、网络请求失败或响应无法解析时返回错误。
 #[traced(subsystem = "iportal", skip(token))]
 pub async fn get_personal_data(
     token: &IPortalToken,

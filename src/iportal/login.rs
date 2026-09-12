@@ -1,3 +1,5 @@
+//! iPortal 登录与令牌管理。
+
 use crate::{
     cas::{self, login::CasToken},
     error::{CheckStatusCodeErr, MapNetworkErr, MapParseErr, MapUnexpectedErr},
@@ -29,7 +31,7 @@ impl IPortalToken {
     ///
     /// # Errors
     ///
-    /// 可能由于 [CasToken] 过期导致返回 [cas::error::TokenExpired] 错误
+    /// 当 [`CasToken`] 过期、网络请求失败或登录响应不符合预期时返回错误。
     #[cfg_attr(
         feature = "tracing",
         tracing::instrument(skip(cas_token), fields(subsystem = "pt"), err)
@@ -88,9 +90,14 @@ impl IPortalToken {
     ///
     /// - `headers`: 一个合法的可用作 [IPortalToken] 的 [HeaderMap]
     ///
+    /// # Returns
+    ///
+    /// 返回一个使用给定请求头的 [`IPortalToken`]。
+    ///
     /// # Preconditions
     ///
-    /// `headers` 参数应该是一个合法的可用作 [IPortalToken] 的 [HeaderMap]，否则会导致未定义行为
+    /// `headers` 应包含当前有效 iPortal 会话的 `Cookie` 请求头；本函数不会验证其有效性。
+    /// 无效请求头会使后续查询返回错误。
     pub fn from_headers_unchecked(headers: HeaderMap) -> Self {
         Self { headers }
     }

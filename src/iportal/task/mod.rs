@@ -1,4 +1,4 @@
-use std::any::Any;
+//! 流程申请记录查询。
 
 use crate::{
     iportal::util::deserialize_timestamp,
@@ -6,18 +6,23 @@ use crate::{
 };
 use chrono::{DateTime, Utc};
 use hnu_query_macros::traced;
-use pdf_extract::Object;
 use serde::{Deserialize, Serialize};
 
 mod fetch;
 mod parse;
 
+/// 分页的申请记录列表。
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ApplyList {
+    /// 申请记录总数。
     pub total: i64,
+    /// 当前页的申请记录。
     pub list: Vec<ApplyItem>,
 }
 
+/// 一条流程申请记录。
+///
+/// 包含申请所对应的应用、发起人、部门、处理进度、时间以及详情链接等信息。
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ApplyItem {
     id: i64,
@@ -57,13 +62,23 @@ pub struct ApplyItem {
     third_name: String,
 }
 
-/// 获取申请列表
+/// 分页获取当前账号发起的全部流程申请。
+///
 /// # Arguments
-/// * `token` - IPortalToken
-/// * `page` - 页码
-/// * `page_size` - 每页数量
+///
+/// - `token`: 个人门户令牌，可以通过
+///   [`IPortalToken::acquire_by_cas_login`](crate::iportal::login::IPortalToken::acquire_by_cas_login)
+///   获取
+/// - `page`: 页码
+/// - `page_size`: 每页记录数
+///
 /// # Returns
-/// 返回申请列表，包括总数和申请项列表
+///
+/// 返回包含记录总数和当前页记录的 [`ApplyList`]。
+///
+/// # Errors
+///
+/// 当令牌失效、网络请求失败或响应无法解析时返回错误。
 #[traced(subsystem = "iportal", skip(token))]
 pub async fn get_apply_list(
     token: &crate::iportal::login::IPortalToken,

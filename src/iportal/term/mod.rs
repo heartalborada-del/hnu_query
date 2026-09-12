@@ -1,3 +1,5 @@
+//! 学年、学期与周次查询。
+
 mod fetch;
 mod parse;
 
@@ -9,23 +11,38 @@ use crate::{
     utils::obs::{fetch_time, parse_time},
 };
 
+/// 给定时间所在学期的信息。
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct TermInfo {
+    /// 学期开始日期。
     pub start_date: String,
+    /// 学期结束日期。
     pub end_date: String,
+    /// 学期描述。
     #[serde(rename = "dsc")]
     pub description: String,
+    /// 学期。
     pub term: String,
+    /// 学年。
     pub year: String,
-    pub week: u16, // maybe i8 enough?
+    /// 给定时间位于该学期的周次。
+    pub week: u16,
 }
 
-/// 获取学期信息
+/// 获取指定时间所在学期的信息。
+///
 /// # Arguments
-/// * `token` - IPortalToken
-/// * `timestamp` - 时间戳，单位为秒
+///
+/// - `token`: 个人门户令牌，可以通过 [`IPortalToken::acquire_by_cas_login`] 获取
+/// - `timestamp`: Unix 时间戳，单位为秒
+///
 /// # Returns
-/// 返回学期信息，包括学期开始时间、结束时间、学期描述、学期、学年和周数
+///
+/// 返回该时间对应的 [`TermInfo`]。
+///
+/// # Errors
+///
+/// 当令牌失效、网络请求失败或响应无法解析时返回错误。
 #[traced(subsystem = "iportal", skip(token))]
 pub async fn get_term_info(
     token: &IPortalToken,
