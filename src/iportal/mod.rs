@@ -1,5 +1,10 @@
+pub mod card;
 pub mod info;
 pub mod login;
+pub mod personal;
+pub mod term;
+
+mod util;
 
 #[cfg(test)]
 mod test;
