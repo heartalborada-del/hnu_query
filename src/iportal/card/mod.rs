@@ -38,13 +38,13 @@ pub struct CardFlowInfoItem {
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct CardDetailsItem {
     #[serde(rename = "nextpage")]
-    next_page: String,
+    pub next_page: String,
     #[serde(rename = "pagesize")]
-    page_size: String,
+    pub page_size: String,
     #[serde(rename = "rowcount")]
-    row_count: String,
+    pub row_count: String,
     #[serde(rename = "total")]
-    data: Vec<CardFlowInfoItem>,
+    pub data: Vec<CardFlowInfoItem>,
 }
 
 fn parse_time_fn<'de, D>(deserializer: D) -> Result<DateTime<Utc>, D::Error>

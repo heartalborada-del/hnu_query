@@ -39,11 +39,11 @@ impl PersonalDataTypeEnum {
 #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
 pub struct PersonalDataItem {
     #[serde(deserialize_with = "deserialize_string_or_float")]
-    value: String,
-    unit: Option<String>,
+    pub value: String,
+    pub unit: Option<String>,
     #[serde(alias = "title")]
-    name: String,
-    email: Option<String>,
+    pub name: String,
+    pub email: Option<String>,
 }
 
 fn deserialize_string_or_float<'de, D>(deserializer: D) -> Result<String, D::Error>

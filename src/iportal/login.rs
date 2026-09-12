@@ -4,7 +4,8 @@ use crate::{
     utils::{client, request::cookie_parser},
 };
 use reqwest::{
-    StatusCode, header::{COOKIE, HeaderMap, LOCATION, SET_COOKIE}, redirect,
+    StatusCode,
+    header::{COOKIE, HeaderMap, LOCATION, SET_COOKIE},
 };
 
 const IPORTAL_URL: &str = "https://cas.hnu.edu.cn/cas/login?service=https%3A%2F%2Fiportal.hnu.edu.cn%2Fhnu%2Ffrontend%2Flogin%3Fredirect%3Dhttps%253A%252F%252Fiportal.hnu.edu.cn%252Fhome&isotherLogin=true";
@@ -55,9 +56,7 @@ impl IPortalToken {
             return Err(format!("登录个人门户失败，HTTP 状态码: {}", status)).unexpected_err();
         }
         let mut cookies = cookie_parser(res.headers().get_all(SET_COOKIE));
-        cookies.extend(cookie_parser(
-            res.headers().get_all(SET_COOKIE)
-        ));
+        cookies.extend(cookie_parser(res.headers().get_all(SET_COOKIE)));
         // CAS may return the ticket response before the iPortal server creates
         // its own session cookie. Follow that redirect manually because the
         // shared client intentionally disables automatic redirects.
